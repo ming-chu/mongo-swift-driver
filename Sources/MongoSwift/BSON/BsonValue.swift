@@ -312,11 +312,18 @@ public struct Decimal128: BsonValue, Equatable, Codable {
         return lhs.data == rhs.data
     }
 
-    public func encode(to storage: DocumentStorage, forKey key: String) throws {
+    /// Returns the provided string as a `bson_decimal128_t`, or throws an error if initialization fails due an
+    /// invalid string.
+    internal static func encode(_ str: String) throws -> bson_decimal128_t {
         var value: bson_decimal128_t = bson_decimal128_t()
-        if !bson_decimal128_from_string(self.data, &value) {
-            throw MongoError.bsonEncodeError(message: "Failed to parse Decimal128 string \(self.data)")
+        guard bson_decimal128_from_string(str, &value) else {
+            throw MongoError.bsonEncodeError(message: "Invalid Decimal128 string \(str)")
         }
+        return value
+    }
+
+    public func encode(to storage: DocumentStorage, forKey key: String) throws {
+        var value = try Decimal128.encode(self.data)
         if !bson_append_decimal128(storage.pointer, key, Int32(key.count), &value) {
             throw bsonEncodeError(value: self, forKey: key)
         }
@@ -357,15 +364,19 @@ extension Double: BsonValue {
 /// The `Int` will be encoded as an Int32 if possible, or an Int64 if necessary.
 extension Int: BsonValue {
 
-    public var bsonType: BsonType { return .int32 }
+    public var bsonType: BsonType { return self.int32Value != nil ? .int32 : .int64 }
+
+    internal var int32Value: Int32? { return Int32(exactly: self) }
+    internal var int64Value: Int64? { return Int64(exactly: self) }
 
     public func encode(to storage: DocumentStorage, forKey key: String) throws {
-        if let int32 = Int32(exactly: self) {
+        if let int32 = self.int32Value {
             return try int32.encode(to: storage, forKey: key)
         }
-        if let int64 = Int64(exactly: self) {
+        if let int64 = self.int64Value {
             return try int64.encode(to: storage, forKey: key)
         }
+
         throw MongoError.bsonEncodeError(message: "`Int` value \(self) could not be encoded as `Int32` or `Int64`")
     }
 
