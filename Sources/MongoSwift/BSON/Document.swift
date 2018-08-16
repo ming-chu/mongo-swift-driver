@@ -20,7 +20,9 @@ public class DocumentStorage {
     }
 }
 
-/// A struct representing the BSON document type.
+/// A struct representing the BSON document type. Documents support appending key/value pairs as well as overwriting
+/// existing values. To remove a key/value pair from the document or perform more complex transformations, use `filter`
+/// and `mapValues` along with `Sequence` protocol methods.
 public struct Document: ExpressibleByDictionaryLiteral, ExpressibleByArrayLiteral {
     /// the storage backing this document 
     internal var storage: DocumentStorage
