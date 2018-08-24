@@ -76,10 +76,15 @@ public struct Document: ExpressibleByDictionaryLiteral, ExpressibleByArrayLitera
      *
      * - Returns: a new `Document`
      */
-    public init(dictionaryLiteral doc: (String, BsonValue?)...) {
+    public init(dictionaryLiteral keyValuePairs: (String, BsonValue?)...) {
+        // make sure all keys are unique
+        if Set(keyValuePairs.map { $0.0 }).count != keyValuePairs.count {
+            preconditionFailure("Dictionary literal \(keyValuePairs) contains duplicate keys")
+        }
+
         self.storage = DocumentStorage()
-        for (k, v) in doc {
-            self[k] = v
+        for (key, value) in keyValuePairs {
+            self[key] = value
         }
     }
     /**
@@ -217,12 +222,12 @@ public struct Document: ExpressibleByDictionaryLiteral, ExpressibleByArrayLitera
             } else {
                 var newSelf = Document()
                 var seen = false
-                self.forEach { (k, v) in
+                try self.forEach { (k, v) in
                     if !seen && k == key {
                         seen = true
-                        newSelf[k] = newValue
+                        try newSelf.setValue(forKey: k, to: newValue)
                     } else {
-                        newSelf[k] = v
+                        try newSelf.setValue(forKey: k, to: v)
                     }
                 }
                 self = newSelf
